@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Диспетчерская роверной локации</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+    --bg:#F4F4F5;
+    --panel:#FFFFFF;
+    --panel-2:#FAFAFA;
+    --border:#EAEAEC;
+    --border-strong:#DDDDE1;
+    --text:#1A1A1D;
+    --text-muted:#77787D;
+    --text-dim:#A6A7AC;
+    --brand:#FC3F1D;
+    --brand-dark:#D6330F;
+    --brand-tint:#FFF1EE;
+    --blue:#2F80ED;
+    --green:#1FA65A;
+    --green-tint:#EAF9F1;
+    --amber:#FF9500;
+    --amber-tint:#FFF6E8;
+    --red:#E5304A;
+    --red-tint:#FEEEF0;
+    --grey:#9AA0A6;
+    --shadow: 0 1px 2px rgba(20,20,25,.04), 0 8px 24px rgba(20,20,25,.05);
+    --tooltip-bg:#1A1A1D;
+    --tooltip-text:#fff;
+    --tooltip-sub:#C7C7CC;
+    --map-road:#EFEFF1;
+    --map-road-line:#E2E2E5;
+    --map-store-fill:#FAFAFA;
+    --map-store-border:#EAEAEC;
+    --map-radius-line:#EAEAEC;
+  }
+
+  html[data-theme="dark"]{
+    --bg:#0F1216;
+    --panel:#181C22;
+    --panel-2:#20252C;
+    --border:#2A2F38;
+    --border-strong:#3A404B;
+    --text:#EDEFF2;
+    --text-muted:#9AA1AC;
+    --text-dim:#666E7A;
+    --brand:#FF5B3C;
+    --brand-dark:#FC3F1D;
+    --brand-tint:#3A2018;
+    --blue:#5B9BFF;
+    --green:#3ECB84;
+    --green-tint:#12291F;
+    --amber:#FFAD3D;
+    --amber-tint:#332411;
+    --red:#FF5A72;
+    --red-tint:#33161C;
+    --grey:#7A8189;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    --tooltip-bg:#F4F4F5;
+    --tooltip-text:#1A1A1D;
+    --tooltip-sub:#6B6B6F;
+    --map-road:#1D2229;
+    --map-road-line:#2A2F38;
+    --map-store-fill:#20252C;
+    --map-store-border:#2A2F38;
+    --map-radius-line:#262C35;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body, .panel, .metric, .topbar, .status-pill, .filter-btn, .btn-ack{
+    transition:background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Golos Text',system-ui,sans-serif;
+    font-size:14px;
+    line-height:1.4;
+    min-height:100vh;
+    padding:22px;
+  }
+  .num{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
+
+  /* ===== Header ===== */
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:16px;
+    padding:16px 22px;
+    background:var(--panel);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+    margin-bottom:16px;
+  }
+  .topbar-left{display:flex; align-items:center; gap:14px;}
+  .brand-badge{
+    width:44px; height:44px; border-radius:13px;
+    background:var(--brand);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .location-name{font-size:16px; font-weight:700; letter-spacing:-0.01em;}
+  .location-sub{color:var(--text-muted); font-size:12.5px; margin-top:1px;}
+  .status-pill{
+    display:flex; align-items:center; gap:7px;
+    padding:7px 14px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:100px;
+    font-size:12.5px;
+    font-weight:600;
+  }
+  .status-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .dot-green{background:var(--green);}
+  .dot-amber{background:var(--amber);}
+  .dot-red{background:var(--red);}
+  .dot-grey{background:var(--grey);}
+  .topbar-right{display:flex; align-items:center; gap:22px;}
+  .theme-toggle{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:100px;
+    padding:4px;
+  }
+  .theme-btn{
+    display:flex; align-items:center; justify-content:center;
+    width:30px; height:30px;
+    border:none;
+    border-radius:100px;
+    background:transparent;
+    color:var(--text-muted);
+    cursor:pointer;
+  }
+  .theme-btn.active{background:var(--brand); color:#fff;}
+  .theme-btn svg{width:16px; height:16px;}
+  .clock-block{text-align:right;}
+  .clock-time{font-size:20px; font-weight:700;}
+  .clock-label{color:var(--text-muted); font-size:11.5px;}
+  .shift-block{text-align:right;}
+  .shift-value{font-size:14px; font-weight:700;}
+  .shift-label{color:var(--text-muted); font-size:11.5px;}
+
+  /* ===== Demo panel ===== */
+  .demo-panel{ margin-bottom:16px; }
+  .demo-panel summary{
+    padding:14px 20px;
+    cursor:pointer;
+    font-weight:700;
+    font-size:13px;
+    list-style:none;
+    display:flex;
+    align-items:center;
+    gap:9px;
+  }
+  .demo-panel summary::-webkit-details-marker{ display:none; }
+  .demo-panel summary::before{
+    content:'▸';
+    color:var(--text-dim);
+    display:inline-block;
+    transition:transform .15s ease;
+  }
+  .demo-panel[open] summary::before{ transform:rotate(90deg); }
+  .demo-badge{
+    background:var(--amber-tint);
+    color:var(--amber);
+    font-size:11px;
+    font-weight:700;
+    padding:2px 9px;
+    border-radius:100px;
+    display:none;
+  }
+  .demo-body{ padding:0 20px 18px; }
+  .demo-body p{ color:var(--text-muted); font-size:12.5px; line-height:1.5; max-width:640px; }
+  .demo-actions{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+
+  /* ===== Metrics row ===== */
+  .metrics-row{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .metric{
+    background:var(--panel);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    padding:16px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:0;
+  }
+  .metric-label{color:var(--text-muted); font-size:12px; font-weight:500;}
+  .metric-value-row{display:flex; align-items:baseline; gap:6px;}
+  .metric-value{font-size:23px; font-weight:800; letter-spacing:-0.01em;}
+  .metric-suffix{color:var(--text-dim); font-size:13px;}
+  .metric-note{font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:100px; display:inline-block; width:fit-content;}
+  .metric-note.warn{color:var(--amber); background:var(--amber-tint);}
+  .metric-note.bad{color:var(--red); background:var(--red-tint);}
+  .metric-note.ok{color:var(--green); background:var(--green-tint);}
+
+  /* ===== Main grid ===== */
+  .main-grid{
+    display:grid;
+    grid-template-columns:1.55fr 1fr;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .panel{
+    background:var(--panel);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:16px 20px;
+    border-bottom:1px solid var(--border);
+  }
+  .panel-title{font-size:14px; font-weight:700;}
+  .panel-title-sub{color:var(--text-dim); font-size:11.5px; margin-left:8px; font-weight:500;}
+  .legend{display:flex; gap:12px; font-size:11px; color:var(--text-muted); font-weight:500;}
+  .legend span{display:flex; align-items:center; gap:5px;}
+  .legend i{width:7px; height:7px; border-radius:50%; display:inline-block;}
+
+  /* ===== Map (Leaflet) ===== */
+  .map-wrap{padding:16px; position:relative;}
+  #leafletMap{
+    height:390px;
+    border-radius:14px;
+    overflow:hidden;
+    background:var(--panel-2);
+    z-index:0;
+  }
+  #leafletMap.theme-dark .leaflet-tile-pane{
+    filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.8);
+  }
+  .leaflet-control-attribution{
+    background:var(--panel) !important;
+    color:var(--text-dim) !important;
+  }
+  .leaflet-control-attribution a{ color:var(--text-muted) !important; }
+  .leaflet-control-zoom{
+    border:none !important;
+    border-radius:12px !important;
+    overflow:hidden;
+    box-shadow:var(--shadow) !important;
+  }
+  .leaflet-control-zoom a{
+    background:var(--panel) !important;
+    color:var(--text) !important;
+    width:32px !important;
+    height:32px !important;
+    line-height:32px !important;
+    font-family:'Golos Text',sans-serif !important;
+    font-weight:700 !important;
+    font-size:16px !important;
+    border:none !important;
+  }
+  .leaflet-control-zoom-in{ border-bottom:1px solid var(--border) !important; }
+  .leaflet-control-zoom a:hover{ background:var(--brand) !important; color:#fff !important; }
+  .rover-tooltip{
+    background:var(--tooltip-bg) !important;
+    color:var(--tooltip-text) !important;
+    border:none !important;
+    border-radius:10px !important;
+    box-shadow:0 10px 30px rgba(0,0,0,.25) !important;
+    font-family:'Golos Text',sans-serif !important;
+    padding:9px 12px !important;
+  }
+  .rover-tooltip::before{ display:none !important; }
+  .leaflet-popup-content-wrapper{
+    background:var(--tooltip-bg);
+    color:var(--tooltip-text);
+    border-radius:10px;
+  }
+  .leaflet-popup-tip{background:var(--tooltip-bg);}
+  .leaflet-popup-content{margin:10px 12px; font-family:'Golos Text',sans-serif;}
+  .popup-title{font-weight:700; font-size:12.5px; margin-bottom:3px;}
+  .popup-row{color:var(--tooltip-sub); font-size:11.5px;}
+  .rover-marker{
+    width:16px; height:16px; border-radius:50%;
+    border:2.5px solid var(--panel);
+    box-shadow:0 1px 4px rgba(0,0,0,.35);
+  }
+  .rover-marker.delivery{background:var(--green);}
+  .rover-marker.parking{background:var(--blue);}
+  .rover-marker.charging{background:var(--blue);}
+  .rover-marker.outside{background:var(--amber);}
+  .rover-marker.issue{background:var(--red); animation:pulseMarker 1.6s infinite;}
+  @keyframes pulseMarker{
+    0%{box-shadow:0 0 0 0 rgba(229,48,74,.55);}
+    70%{box-shadow:0 0 0 12px rgba(229,48,74,0);}
+    100%{box-shadow:0 0 0 0 rgba(229,48,74,0);}
+  }
+  .darkstore-marker{
+    width:16px; height:16px; border-radius:5px;
+    background:var(--brand);
+    border:2.5px solid var(--panel);
+    box-shadow:0 1px 4px rgba(0,0,0,.35);
+  }
+
+  /* ===== Alerts ===== */
+  .alerts-list{ max-height:392px; overflow-y:auto; }
+  .alert{
+    display:flex;
+    gap:12px;
+    padding:14px 20px;
+    border-bottom:1px solid var(--border);
+    align-items:flex-start;
+  }
+  .alert:last-child{border-bottom:none;}
+  .alert-bar{width:4px; align-self:stretch; border-radius:3px; flex-shrink:0;}
+  .bar-red{background:var(--red);}
+  .bar-amber{background:var(--amber);}
+  .bar-blue{background:var(--blue);}
+  .alert-body{flex:1; min-width:0;}
+  .alert-top{display:flex; justify-content:space-between; gap:8px; align-items:baseline;}
+  .alert-title{font-size:12.5px; font-weight:700;}
+  .alert-time{font-size:11px; color:var(--text-dim); flex-shrink:0; font-weight:600;}
+  .alert-desc{color:var(--text-muted); font-size:12px; margin-top:3px;}
+  .alert-actions{display:flex; gap:8px; margin-top:9px;}
+  .btn-ack{
+    background:var(--brand-tint);
+    border:none;
+    color:var(--brand);
+    font-size:11.5px;
+    font-weight:700;
+    padding:6px 12px;
+    border-radius:100px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .btn-ack:hover{background:var(--brand); color:#fff;}
+  .alerts-empty{padding:36px 16px; text-align:center; color:var(--text-dim); font-size:12.5px;}
+
+  /* ===== Table ===== */
+  .table-filters{display:flex; gap:6px;}
+  .filter-btn{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text-muted);
+    font-size:11.5px;
+    font-weight:600;
+    padding:6px 12px;
+    border-radius:100px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .filter-btn.active{background:var(--brand); border-color:var(--brand); color:#fff;}
+  table{width:100%; border-collapse:collapse;}
+  thead th{
+    text-align:left;
+    font-weight:600;
+    color:var(--text-dim);
+    font-size:11.5px;
+    padding:10px 20px;
+    border-bottom:1px solid var(--border);
+  }
+  tbody td{
+    padding:12px 20px;
+    border-bottom:1px solid var(--border);
+    font-size:12.5px;
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--panel-2);}
+  .rid{font-weight:700;}
+  .status-chip{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:500;}
+  .battery-bar-wrap{display:flex; align-items:center; gap:8px;}
+  .battery-track{width:52px; height:6px; background:var(--border); border-radius:3px; overflow:hidden;}
+  .battery-fill{height:100%; border-radius:3px;}
+  .cell-muted{color:var(--text-muted);}
+
+  .footnote{ color:var(--text-dim); font-size:11.5px; padding:2px 4px 0; }
+
+  /* ===== Table horizontal scroll (узкие экраны) ===== */
+  .table-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .table-scroll table{ min-width:720px; }
+
+  /* ===== Responsive: планшет ===== */
+  @media (max-width:960px){
+    .metrics-row{grid-template-columns:repeat(3,1fr);}
+    .main-grid{grid-template-columns:1fr;}
+  }
+
+  /* ===== Responsive: маленький планшет / широкий телефон ===== */
+  @media (max-width:680px){
+    body{ padding:14px; }
+    .topbar{ flex-direction:column; align-items:flex-start; padding:14px 16px; gap:14px; }
+    .topbar-right{ width:100%; justify-content:space-between; flex-wrap:wrap; row-gap:12px; column-gap:14px; }
+    .clock-block, .shift-block{ text-align:left; }
+    .metrics-row{ grid-template-columns:repeat(2,1fr); gap:10px; }
+    .metric{ padding:12px 14px; }
+    .metric-value{ font-size:19px; }
+    .panel-head{ flex-wrap:wrap; row-gap:10px; padding:14px 16px; }
+    .legend{ width:100%; flex-wrap:wrap; row-gap:8px; }
+    .table-filters{ width:100%; flex-wrap:wrap; row-gap:8px; }
+    #leafletMap{ height:300px; }
+    .demo-actions{ flex-direction:column; }
+    .demo-actions .filter-btn{ width:100%; text-align:center; }
+    .demo-body p{ max-width:none; }
+    thead th, tbody td{ padding:9px 14px; font-size:12px; }
+  }
+
+  /* ===== Responsive: телефон ===== */
+  @media (max-width:420px){
+    body{ padding:10px; }
+    .location-name{ font-size:14px; }
+    .location-sub{ font-size:11px; }
+    .brand-badge{ width:38px; height:38px; }
+    .clock-time{ font-size:17px; }
+    .metrics-row{ grid-template-columns:repeat(2,1fr); gap:8px; }
+    .metric-value{ font-size:17px; }
+    .metric-label{ font-size:11px; }
+    #leafletMap{ height:250px; }
+    .theme-toggle{ order:2; }
+    .status-pill{ order:1; }
+    .shift-block, .clock-block{ order:3; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="brand-badge">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="9" width="16" height="8" rx="4" fill="white"/>
+        <circle cx="7.5" cy="19" r="2" fill="white"/>
+        <circle cx="16.5" cy="19" r="2" fill="white"/>
+        <rect x="10.5" y="4" width="3" height="5" rx="1.5" fill="white"/>
+        <circle cx="12" cy="13" r="1.6" fill="#FC3F1D"/>
+      </svg>
+    </div>
+    <div>
+      <div class="location-name">Яндекс Ровер · Диспетчерская локации</div>
+      <div class="location-sub">Лавка «Полимерная ул., 4А» · даркстор DS-0412</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="theme-toggle" id="themeToggle">
+      <button class="theme-btn active" data-theme="light" title="Светлая тема">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <button class="theme-btn" data-theme="dark" title="Тёмная тема">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+    <div class="status-pill" id="locationStatusPill">
+      <span class="status-dot dot-amber"></span>
+      <span id="locationStatusText">Внимание — 1 активный алерт</span>
+    </div>
+    <div class="shift-block">
+      <div class="shift-value num" id="shiftCountdown">08ч 28м</div>
+      <div class="shift-label">до конца смены (23:00)</div>
+    </div>
+    <div class="clock-block">
+      <div class="clock-time num" id="clock">14:32:07</div>
+      <div class="clock-label">время локации</div>
+    </div>
+  </div>
+</div>
+
+<details class="panel demo-panel">
+  <summary>Демо-режим смены <span class="demo-badge" id="demoBadge">включён</span></summary>
+  <div class="demo-body">
+    <p>Кнопки ниже не меняют системное время — они временно переключают, как ведёт себя дашборд при смене состояния, чтобы показать переход между началом и концом смены не дожидаясь реальных 8:00 / 23:00.</p>
+    <div class="demo-actions">
+      <button class="filter-btn" onclick="demoSetShift(true)">▶ Промотать к началу смены</button>
+      <button class="filter-btn" onclick="demoSetShift(false)">⏸ Промотать к концу смены</button>
+      <button class="filter-btn" onclick="demoClearOverride()">↺ Вернуться к реальному времени</button>
+    </div>
+  </div>
+</details>
+
+<div class="metrics-row" id="metricsRow"></div>
+
+<div class="main-grid">
+  <div class="panel">
+    <div class="panel-head">
+      <div><span class="panel-title">Схема локации</span><span class="panel-title-sub">парковка и роботы, реальное время</span></div>
+      <div class="legend">
+        <span><i style="background:var(--green)"></i>на заказе</span>
+        <span><i style="background:var(--blue)"></i>на парковке</span>
+        <span><i style="background:var(--amber)"></i>вне зоны</span>
+        <span><i style="background:var(--red)"></i>инцидент</span>
+      </div>
+    </div>
+    <div class="map-wrap">
+      <div id="leafletMap"></div>
+    </div>
+    <div class="footnote" style="padding:0 20px 16px;">Круг — зона доставки роботом 1,5 км от даркстора. Пунктирный прямоугольник — размеченная роверная парковка. Маршруты доставки — иллюстративная сетка вдоль условных улиц (не точный дорожный граф), робот на заказе сдвигается по ней каждые 30–60 сек. Вне часов смены (23:00–08:00) весь флот отображается на парковке.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div><span class="panel-title">Алерты</span><span class="panel-title-sub" id="alertsCountSub">за смену</span></div>
+    </div>
+    <div class="alerts-list" id="alertsList"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <div><span class="panel-title">Роботы на смене</span><span class="panel-title-sub">12 запрошено Лавкой на сегодня</span></div>
+    <div class="table-filters" id="tableFilters">
+      <button class="filter-btn active" data-filter="all">Все</button>
+      <button class="filter-btn" data-filter="delivery">На заказе</button>
+      <button class="filter-btn" data-filter="parking">На парковке</button>
+      <button class="filter-btn" data-filter="outside">Вне зоны</button>
+      <button class="filter-btn" data-filter="issue">Инцидент</button>
+    </div>
+  </div>
+  <div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Статус</th>
+        <th>Заряд</th>
+        <th>Текущая задача / локация</th>
+        <th>Время в статусе</th>
+        <th>Последняя связь</th>
+      </tr>
+    </thead>
+    <tbody id="robotTableBody"></tbody>
+  </table>
+  </div>
+</div>
+
+<script>
+const STATUS_META = {
+  delivery: {label:'На заказе', dot:'var(--green)'},
+  parking:  {label:'На парковке', dot:'var(--blue)'},
+  charging: {label:'Зарядка', dot:'var(--blue)'},
+  outside:  {label:'Вне зоны', dot:'var(--amber)'},
+  issue:    {label:'Инцидент', dot:'var(--red)'},
+  offline:  {label:'Не на связи', dot:'var(--grey)'}
+};
+
+let robots = [
+  {id:'RVR-014', status:'delivery', battery:71, task:'Заказ #88213 · 0,9 км до клиента',    since:6,  lastSeen:0, posMode:'route', routeIdx:0, wpIndex:1, wpDir:1,  moveTimer:35, orderId:88213},
+  {id:'RVR-021', status:'delivery', battery:64, task:'Заказ #88220 · возврат на локацию',    since:18, lastSeen:0, posMode:'route', routeIdx:1, wpIndex:2, wpDir:-1, moveTimer:40, orderId:88220},
+  {id:'RVR-032', status:'delivery', battery:58, task:'Заказ #88225 · 1,2 км до клиента',    since:3,  lastSeen:0, posMode:'route', routeIdx:2, wpIndex:2, wpDir:1,  moveTimer:28, orderId:88225},
+  {id:'RVR-007', status:'parking',  battery:93, task:'Ожидание заказа',                     since:22, lastSeen:0, posMode:'parkingSlot', slotIndex:0},
+  {id:'RVR-011', status:'parking',  battery:88, task:'Ожидание заказа',                     since:14, lastSeen:0, posMode:'parkingSlot', slotIndex:1},
+  {id:'RVR-018', status:'parking',  battery:81, task:'Ожидание заказа',                     since:9,  lastSeen:0, posMode:'parkingSlot', slotIndex:2},
+  {id:'RVR-026', status:'charging', battery:34, task:'Зарядная станция',                    since:40, lastSeen:0, posMode:'parkingSlot', slotIndex:3},
+  {id:'RVR-009', status:'outside',  battery:52, task:'Простой у подъезда, вне парковки',    since:14, lastSeen:0, posMode:'outsideSlot', pinned:true},
+  {id:'RVR-041', status:'delivery', battery:76, task:'Заказ #88231 · 0,4 км до клиента',    since:2,  lastSeen:0, posMode:'route', routeIdx:3, wpIndex:1, wpDir:1,  moveTimer:22, orderId:88231},
+  {id:'RVR-005', status:'parking',  battery:97, task:'Ожидание заказа',                     since:31, lastSeen:0, posMode:'parkingSlot', slotIndex:4},
+  {id:'RVR-038', status:'issue',    battery:41, task:'Остановка: препятствие на маршруте',  since:11, lastSeen:3, posMode:'fixed', fixed:{dx:1050, dy:120}, pinned:true},
+  {id:'RVR-044', status:'delivery', battery:69, task:'Заказ #88234 · 1,4 км до клиента',    since:9,  lastSeen:0, posMode:'route', routeIdx:4, wpIndex:2, wpDir:1,  moveTimer:50, orderId:88234},
+];
+
+let alerts = [
+  {id:1, level:'red',   type:'issue',      robotId:'RVR-038', time:'14:21', ack:false},
+  {id:2, level:'amber', type:'outside',    robotId:'RVR-009', time:'14:18', ack:false},
+  {id:3, level:'blue',  type:'conversion', time:'13:55', ack:false},
+];
+
+function freshAlerts(){
+  const now = new Date();
+  const t = (offsetMin) => {
+    const d = new Date(now.getTime() - offsetMin*60000);
+    return d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+  };
+  return [
+    {id:Date.now()+1, level:'red',   type:'issue',      robotId:'RVR-038', time:t(3),  ack:false},
+    {id:Date.now()+2, level:'amber', type:'outside',    robotId:'RVR-009', time:t(6),  ack:false},
+    {id:Date.now()+3, level:'blue',  type:'conversion', time:t(29), ack:false},
+  ];
+}
+
+function buildAlertContent(a){
+  if(a.type === 'issue'){
+    const r = robots.find(x => x.id === a.robotId);
+    return {
+      title: `${a.robotId} · остановка на маршруте`,
+      desc: r
+        ? `Робот не двигается ${r.since} мин, статус «инцидент». Последняя связь ${r.lastSeen===0 ? 'только что' : r.lastSeen+' мин назад'}.`
+        : `Робот не двигается, статус «инцидент».`
+    };
+  }
+  if(a.type === 'outside'){
+    const r = robots.find(x => x.id === a.robotId);
+    return {
+      title: `${a.robotId} · вне зоны парковки`,
+      desc: r
+        ? `Не на заказе, вне разметки ${r.since} мин. Риск штрафа при превышении 20 мин.`
+        : `Не на заказе, вне разметки парковки. Риск штрафа при превышении 20 мин.`
+    };
+  }
+  // 'conversion' и любые прочие статичные алерты без привязки к роботу
+  return {
+    title: 'Конверсия в роботодоставку ниже нормы',
+    desc: '18,4% при обычных ~20% за последний час.'
+  };
+}
+
+const requestedByLavka = 12;
+const onShift = robots.length;
+
+function renderMetrics(){
+  const delivering = robots.filter(r=>r.status==='delivery').length;
+  const slaOk = 96;
+  const conversion = 18.4;
+  const outsideNow = robots.filter(r=>r.status==='outside').length;
+  const openAlerts = alerts.filter(a=>!a.ack).length;
+
+  const metrics = [
+    {label:'Роботов на смене', value:`${onShift}/${requestedByLavka}`, note: onShift>=requestedByLavka ? 'план выполнен' : `недобор ${requestedByLavka-onShift}`, cls: onShift>=requestedByLavka?'ok':'warn'},
+    {label:'На заказе сейчас', value:delivering, suffix:`из ${onShift}`, note:'загрузка парка', cls:'ok'},
+    {label:'Конверсия в робота', value:conversion+'%', note:'норма ~20%', cls: conversion<18?'bad':'warn'},
+    {label:'SLA ≤ 30 мин', value:slaOk+'%', note:'за последний час', cls: slaOk>=95?'ok':'warn'},
+    {label:'Вне зоны парковки', value:outsideNow, suffix:'робот(ов)', note: outsideNow>0 ? 'риск штрафа' : 'нарушений нет', cls: outsideNow>0?'warn':'ok'},
+    {label:'Открытых алертов', value:openAlerts, note: openAlerts>0 ? 'требуют внимания' : 'всё чисто', cls: openAlerts>0?'bad':'ok'},
+  ];
+
+  document.getElementById('metricsRow').innerHTML = metrics.map(m=>`
+    <div class="metric">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-value-row">
+        <span class="metric-value num">${m.value}</span>
+        ${m.suffix? `<span class="metric-suffix">${m.suffix}</span>`:''}
+      </div>
+      <div class="metric-note ${m.cls}">${m.note}</div>
+    </div>
+  `).join('');
+}
+
+function batteryColor(b){
+  if(b<25) return 'var(--red)';
+  if(b<45) return 'var(--amber)';
+  return 'var(--green)';
+}
+
+function cssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+/* ---------- Real map (Leaflet) ---------- */
+function latLngOffset(base, dxEast, dyNorth){
+  const lat = base.lat + (dyNorth / 111320);
+  const lng = base.lng + (dxEast / (111320 * Math.cos(base.lat * Math.PI/180)));
+  return {lat, lng};
+}
+
+// Дом 4 (геокодирован) → по скриншотам подпись «4А» стоит на здании севернее и чуть западнее прошлой точки
+const LOCATION_CENTER = latLngOffset({lat:55.746010, lng:37.797415}, 0, -42);
+const DELIVERY_RADIUS_M = 1500;
+
+// Координаты от пользователя → по фото парковка сдвинута правее и чуть ниже относительно исходной точки
+const PARKING_CENTER = latLngOffset({lat:55.745094, lng:37.796863}, 30, -4);
+const PARKING_HALF_WIDTH_M = 16;
+const PARKING_HALF_HEIGHT_M = 6;
+
+// Сетка парковочных мест внутри прямоугольника — по одному месту на робота, без наложений
+const PARKING_SLOTS = [];
+[-14,-8,-2,2,8,14].forEach(x => [-3,3].forEach(y => PARKING_SLOTS.push({dx:x, dy:y})));
+const OUTSIDE_SLOT = {dx:26, dy:14}; // точка рядом с парковкой, но за её пределами
+
+// Иллюстративные маршруты доставки (ломаные вдоль условной уличной сетки от даркстора).
+// Это не точный дорожный граф — координат реальных полигонов улиц у меня нет,
+// маршруты откалиброваны так, чтобы визуально не пересекать здания на подложке.
+const ROUTES = [
+  [{dx:0,dy:0},{dx:0,dy:150},{dx:220,dy:150},{dx:220,dy:380}],
+  [{dx:0,dy:0},{dx:180,dy:0},{dx:180,dy:-200},{dx:420,dy:-200}],
+  [{dx:0,dy:0},{dx:-150,dy:0},{dx:-150,dy:260},{dx:-380,dy:260}],
+  [{dx:0,dy:0},{dx:0,dy:-160},{dx:280,dy:-160},{dx:280,dy:-420}],
+  [{dx:0,dy:0},{dx:-200,dy:-100},{dx:-200,dy:-320},{dx:-460,dy:-320}],
+];
+
+const SIMULATE_INTERVAL_S = 4; // соответствует setInterval(simulate, 4000)
+
+let shiftOverride = null; // null = реальное время; true/false = демо-переопределение
+
+function isShiftActive(now = new Date()){
+  if(shiftOverride !== null) return shiftOverride;
+  const start = new Date(now); start.setHours(8,0,0,0);
+  const end = new Date(now); end.setHours(23,0,0,0);
+  return now >= start && now < end;
+}
+
+let map, tileLayer, radiusCircle, parkingZone, darkstoreMarker, markersLayer;
+
+function metersToLatLng(dxEast, dyNorth, center = LOCATION_CENTER){
+  const lat = center.lat + (dyNorth / 111320);
+  const lng = center.lng + (dxEast / (111320 * Math.cos(center.lat * Math.PI/180)));
+  return [lat, lng];
+}
+
+function getRobotLatLng(r){
+  if(r.posMode === 'parkingSlot'){
+    const slot = PARKING_SLOTS[r.slotIndex];
+    return metersToLatLng(slot.dx, slot.dy, PARKING_CENTER);
+  }
+  if(r.posMode === 'outsideSlot'){
+    return metersToLatLng(OUTSIDE_SLOT.dx, OUTSIDE_SLOT.dy, PARKING_CENTER);
+  }
+  if(r.posMode === 'route'){
+    const wp = ROUTES[r.routeIdx][r.wpIndex];
+    return metersToLatLng(wp.dx, wp.dy, LOCATION_CENTER);
+  }
+  return metersToLatLng(r.fixed.dx, r.fixed.dy, LOCATION_CENTER);
+}
+
+function getTileUrl(){
+  return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+}
+
+function initMap(){
+  map = L.map('leafletMap', {scrollWheelZoom:false, attributionControl:false}).setView([LOCATION_CENTER.lat, LOCATION_CENTER.lng], 14);
+
+  L.control.attribution({prefix:false}).addTo(map).addAttribution('© OpenStreetMap contributors');
+
+  tileLayer = L.tileLayer(getTileUrl(), { maxZoom: 19 }).addTo(map);
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.getElementById('leafletMap').classList.toggle('theme-dark', isDark);
+
+  radiusCircle = L.circle([LOCATION_CENTER.lat, LOCATION_CENTER.lng], {
+    radius: DELIVERY_RADIUS_M,
+    color: cssVar('--blue'),
+    weight: 2,
+    dashArray: '6,6',
+    fillColor: cssVar('--blue'),
+    fillOpacity: 0.05
+  }).addTo(map);
+  radiusCircle.bindTooltip('Зона доставки роботом · радиус 1,5 км', {direction:'top', className:'rover-tooltip'});
+
+  const parkingCorner1 = metersToLatLng(-PARKING_HALF_WIDTH_M, -PARKING_HALF_HEIGHT_M, PARKING_CENTER);
+  const parkingCorner2 = metersToLatLng(PARKING_HALF_WIDTH_M, PARKING_HALF_HEIGHT_M, PARKING_CENTER);
+  parkingZone = L.rectangle([parkingCorner1, parkingCorner2], {
+    color: cssVar('--green'),
+    weight: 2,
+    dashArray: '5,4',
+    fillColor: cssVar('--green'),
+    fillOpacity: 0.15
+  }).addTo(map);
+  parkingZone.bindTooltip('Роверная парковка (ориентировочно)', {direction:'top', className:'rover-tooltip'});
+
+  darkstoreMarker = L.marker([LOCATION_CENTER.lat, LOCATION_CENTER.lng], {
+    icon: L.divIcon({className:'', html:'<div class="darkstore-marker"></div>', iconSize:[16,16], iconAnchor:[8,8]})
+  }).addTo(map);
+  darkstoreMarker.bindTooltip('<div class="popup-title">Даркстор DS-0412</div><div class="popup-row">Яндекс Лавка · Полимерная ул., 4А</div>', {direction:'top', offset:[0,-10], className:'rover-tooltip'});
+
+  markersLayer = L.layerGroup().addTo(map);
+  map.fitBounds(radiusCircle.getBounds(), {padding:[10,10]});
+  renderMap();
+}
+
+function renderMap(){
+  if(!map) return;
+  markersLayer.clearLayers();
+  robots.forEach(r=>{
+    const latlng = getRobotLatLng(r);
+    const icon = L.divIcon({
+      className:'',
+      html:`<div class="rover-marker ${r.status}"></div>`,
+      iconSize:[16,16],
+      iconAnchor:[8,8]
+    });
+    const meta = STATUS_META[r.status];
+    const marker = L.marker(latlng, {icon}).addTo(markersLayer);
+    marker.bindTooltip(`<div class="popup-title">${r.id}</div>
+      <div class="popup-row">${meta.label} · заряд ${r.battery}%</div>
+      <div class="popup-row">${r.task}</div>
+      <div class="popup-row">в статусе ${r.since} мин</div>`,
+      {direction:'top', offset:[0,-10], className:'rover-tooltip'});
+  });
+}
+
+function applyMapTheme(){
+  if(!map) return;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.getElementById('leafletMap').classList.toggle('theme-dark', isDark);
+  radiusCircle.setStyle({color:cssVar('--blue'), fillColor:cssVar('--blue')});
+  parkingZone.setStyle({color:cssVar('--green'), fillColor:cssVar('--green')});
+}
+
+function levelBar(l){ return l==='red' ? 'bar-red' : l==='amber' ? 'bar-amber' : 'bar-blue'; }
+
+function renderAlerts(){
+  const open = alerts.filter(a=>!a.ack);
+  document.getElementById('alertsCountSub').textContent = `${open.length} активных из ${alerts.length}`;
+  const list = document.getElementById('alertsList');
+  if(open.length===0){
+    list.innerHTML = `<div class="alerts-empty">Открытых алертов нет</div>`;
+  } else {
+    list.innerHTML = open.map(a=>{
+      const content = buildAlertContent(a);
+      return `
+      <div class="alert">
+        <div class="alert-bar ${levelBar(a.level)}"></div>
+        <div class="alert-body">
+          <div class="alert-top">
+            <div class="alert-title">${content.title}</div>
+            <div class="alert-time">${a.time}</div>
+          </div>
+          <div class="alert-desc">${content.desc}</div>
+          <div class="alert-actions">
+            <button class="btn-ack" onclick="ackAlert(${a.id})">Взять в работу</button>
+          </div>
+        </div>
+      </div>
+    `;
+    }).join('');
+  }
+  const pill = document.getElementById('locationStatusPill');
+  const text = document.getElementById('locationStatusText');
+  const hasRed = open.some(a=>a.level==='red');
+  const dot = pill.querySelector('.status-dot');
+  if(hasRed){
+    dot.className = 'status-dot dot-red';
+    text.textContent = `Инцидент — ${open.length} активных алерт(а)`;
+  } else if(open.length>0){
+    dot.className = 'status-dot dot-amber';
+    text.textContent = `Внимание — ${open.length} активных алерт(а)`;
+  } else {
+    dot.className = 'status-dot dot-green';
+    text.textContent = 'В норме';
+  }
+}
+
+function ackAlert(id){
+  const a = alerts.find(x=>x.id===id);
+  if(a){ a.ack = true; }
+  renderAlerts();
+  renderMetrics();
+}
+
+let currentFilter = 'all';
+function renderTable(){
+  const body = document.getElementById('robotTableBody');
+  const rows = robots.filter(r=> currentFilter==='all' || r.status===currentFilter || (currentFilter==='parking' && r.status==='charging'));
+  body.innerHTML = rows.map(r=>{
+    const meta = STATUS_META[r.status];
+    return `<tr>
+      <td class="rid">${r.id}</td>
+      <td><span class="status-chip"><span class="status-dot" style="background:${meta.dot}"></span>${meta.label}</span></td>
+      <td>
+        <div class="battery-bar-wrap">
+          <div class="battery-track"><div class="battery-fill" style="width:${r.battery}%; background:${batteryColor(r.battery)}"></div></div>
+          <span class="cell-muted num">${r.battery}%</span>
+        </div>
+      </td>
+      <td>${r.task}</td>
+      <td class="cell-muted num">${r.since} мин</td>
+      <td class="cell-muted num">${r.lastSeen===0 ? 'сейчас' : r.lastSeen+' мин назад'}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('tableFilters').addEventListener('click', e=>{
+  const btn = e.target.closest('.filter-btn');
+  if(!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.filter;
+  renderTable();
+});
+
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function tick(){
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('ru-RU');
+
+  const countdownEl = document.getElementById('shiftCountdown');
+  const labelEl = countdownEl.nextElementSibling;
+
+  if(shiftOverride !== null){
+    countdownEl.textContent = 'Демо';
+    labelEl.textContent = shiftOverride ? 'смена идёт (демо-режим)' : 'смена окончена (демо-режим)';
+    return;
+  }
+
+  const todayStart = new Date(now); todayStart.setHours(8,0,0,0);
+  const todayEnd   = new Date(now); todayEnd.setHours(23,0,0,0);
+
+  let diffMs, label;
+  if (isShiftActive(now)) {
+    diffMs = todayEnd - now;
+    label = 'до конца смены (23:00)';
+  } else if (now < todayStart) {
+    diffMs = todayStart - now;
+    label = 'до начала смены (08:00)';
+  } else {
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    diffMs = tomorrowStart - now;
+    label = 'до начала смены (08:00)';
+  }
+
+  const totalMin = Math.max(0, Math.floor(diffMs / 60000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  countdownEl.textContent = `${pad(h)}ч ${pad(m)}м`;
+  labelEl.textContent = label;
+}
+
+/* ---------- Theme toggle ---------- */
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  document.querySelectorAll('.theme-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.theme === theme);
+  });
+}
+document.getElementById('themeToggle').addEventListener('click', e=>{
+  const btn = e.target.closest('.theme-btn');
+  if(!btn) return;
+  setTheme(btn.dataset.theme);
+  applyMapTheme();
+});
+// стартуем со светлой темы, либо с системной, если она тёмная
+const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+setTheme(prefersDark ? 'dark' : 'light');
+
+function nextFreeSlot(){
+  const used = new Set(robots.filter(x => x.posMode === 'parkingSlot').map(x => x.slotIndex));
+  for(let i=0; i<PARKING_SLOTS.length; i++){
+    if(!used.has(i)) return i;
+  }
+  return Math.floor(Math.random() * PARKING_SLOTS.length);
+}
+
+function sendToParking(r, task){
+  r.status = 'parking';
+  r.posMode = 'parkingSlot';
+  r.slotIndex = nextFreeSlot();
+  r.task = task;
+  r.since = 0;
+  r.pinned = false;
+}
+
+function moveRobotAlongRoute(r){
+  const route = ROUTES[r.routeIdx];
+  r.wpIndex += r.wpDir;
+
+  if(r.wpIndex >= route.length - 1){
+    r.wpIndex = route.length - 1;
+    r.wpDir = -1; // конечная точка маршрута — разворот на локацию
+    r.task = `Заказ #${r.orderId} · возврат на локацию`;
+    return;
+  }
+  if(r.wpIndex <= 0){
+    r.wpIndex = 0;
+    finishDelivery(r);
+    return;
+  }
+  const remainingSteps = r.wpDir === 1 ? (route.length - 1 - r.wpIndex) : r.wpIndex;
+  r.task = r.wpDir === 1
+    ? `Заказ #${r.orderId} · ${(remainingSteps * 0.35).toFixed(1)} км до клиента`
+    : `Заказ #${r.orderId} · возврат на локацию`;
+}
+
+function finishDelivery(r){
+  if(r.battery < 45){
+    r.status = 'charging';
+    r.posMode = 'parkingSlot';
+    r.slotIndex = nextFreeSlot();
+    r.task = 'Зарядная станция';
+    r.since = 0;
+  } else {
+    sendToParking(r, 'Ожидание заказа');
+  }
+}
+
+function startDelivery(r){
+  r.status = 'delivery';
+  r.posMode = 'route';
+  r.routeIdx = Math.floor(Math.random() * ROUTES.length);
+  r.wpIndex = 0;
+  r.wpDir = 1;
+  r.moveTimer = 30 + Math.random() * 30;
+  r.orderId = 88200 + Math.floor(Math.random() * 999);
+  r.since = 0;
+  r.slotIndex = undefined;
+  // Первая точка маршрута совпадает с координатами даркстора — сразу сдвигаем робота
+  // на следующую точку, иначе он визуально перекрывает маркер даркстора на карте.
+  moveRobotAlongRoute(r);
+}
+
+function startDeliveryDemo(r){
+  // как startDelivery, но продвигает робота ещё на шаг дальше — для наглядной демонстрации заказчику
+  startDelivery(r);
+  moveRobotAlongRoute(r);
+}
+
+let shiftWasActive = isShiftActive();
+if(!shiftWasActive){
+  alerts = []; // если страница открыта вне часов смены — алертов быть не должно
+  forceFleetToParking(); // и весь флот сразу единообразно на парковке, а не в разнобой из стартовых данных
+}
+
+function forceFleetToParking(){
+  // Единый момент перехода — весь флот получает одинаковый статус, текст и обнулённый таймер разом,
+  // чтобы в таблице не было расхождений вида «13 мин» у одних и «45 мин» у других.
+  robots.forEach(r=>{
+    r.status = 'parking';
+    r.posMode = 'parkingSlot';
+    r.slotIndex = nextFreeSlot();
+    r.task = 'Смена окончена · ожидание на парковке';
+    r.since = 0;
+    r.pinned = false;
+  });
+}
+
+function activateIncidentRobots(){
+  // Алерты при старте смены ссылаются на конкретных роботов — переводим их в
+  // соответствующий статус и закрепляем на всю смену, иначе пульсирующий маркер
+  // инцидента может исчезнуть раньше, чем сам алерт.
+  const issueBot = robots.find(r => r.id === 'RVR-038');
+  if(issueBot){
+    issueBot.status = 'issue';
+    issueBot.posMode = 'fixed';
+    issueBot.fixed = {dx:1050, dy:120};
+    issueBot.task = 'Остановка: препятствие на маршруте';
+    issueBot.since = 11;
+    issueBot.lastSeen = 3;
+    issueBot.pinned = true;
+  }
+  const outsideBot = robots.find(r => r.id === 'RVR-009');
+  if(outsideBot){
+    outsideBot.status = 'outside';
+    outsideBot.posMode = 'outsideSlot';
+    outsideBot.task = 'Простой у подъезда, вне парковки';
+    outsideBot.since = 14;
+    outsideBot.lastSeen = 0;
+    outsideBot.pinned = true;
+  }
+}
+
+function handleShiftTransition(activeNow){
+  if(activeNow){
+    // Смена началась — свежие алерты, роботы под них и пара роботов сразу видимо едут по заказам
+    alerts = freshAlerts();
+    activateIncidentRobots();
+    const demoRobots = robots
+      .filter(r => r.status === 'parking' && r.id !== 'RVR-038' && r.id !== 'RVR-009')
+      .slice(0, 2);
+    demoRobots.forEach(r => startDeliveryDemo(r));
+  } else {
+    // Смена закончилась — операций нет, весь флот синхронно встаёт на парковку
+    alerts = [];
+    forceFleetToParking();
+  }
+  renderAlerts();
+  renderTable();
+  renderMap();
+  renderMetrics();
+}
+
+/* ---------- Демо-режим: промотка начала/конца смены по кнопке ---------- */
+function updateDemoBadge(){
+  const badge = document.getElementById('demoBadge');
+  if(badge) badge.style.display = shiftOverride !== null ? 'inline-block' : 'none';
+}
+
+function demoSetShift(active){
+  shiftOverride = active;
+  handleShiftTransition(active);
+  shiftWasActive = active;
+  updateDemoBadge();
+  tick();
+}
+
+function demoClearOverride(){
+  shiftOverride = null;
+  shiftWasActive = isShiftActive();
+  updateDemoBadge();
+  tick();
+}
+
+function simulate(){
+  const activeNow = isShiftActive();
+
+  if(activeNow !== shiftWasActive){
+    handleShiftTransition(activeNow);
+    shiftWasActive = activeNow;
+  }
+
+  if(!activeNow){
+    // Смена не идёт — флот уже синхронно на парковке (см. forceFleetToParking при переходе),
+    // здесь просто тикаем общий таймер «время в статусе»
+    robots.forEach(r => r.since += 1);
+    renderAlerts();
+    renderTable();
+    renderMap();
+    renderMetrics();
+    return;
+  }
+
+  robots.forEach(r=>{
+    r.since += 1;
+
+    if(r.status === 'delivery'){
+      r.battery = Math.max(5, r.battery - (Math.random() < 0.5 ? 1 : 0));
+      r.moveTimer -= SIMULATE_INTERVAL_S;
+      if(r.moveTimer <= 0){
+        moveRobotAlongRoute(r);
+        r.moveTimer = 30 + Math.random() * 30;
+      }
+    } else if(r.status === 'charging'){
+      r.battery = Math.min(100, r.battery + 2);
+      if(r.battery >= 97){
+        sendToParking(r, 'Ожидание заказа');
+      }
+    } else if(r.status === 'parking'){
+      if(Math.random() < 0.04){
+        startDelivery(r);
+      }
+    } else if(r.status === 'outside'){
+      r.battery = Math.max(5, r.battery - (Math.random() < 0.5 ? 1 : 0));
+      if(!r.pinned && Math.random() < 0.05){
+        sendToParking(r, 'Возвращён на парковку оператором');
+      }
+    } else if(r.status === 'issue'){
+      r.lastSeen = Math.min(9, r.lastSeen + 1);
+      if(!r.pinned && Math.random() < 0.03){
+        sendToParking(r, 'Инцидент устранён · на парковке');
+        r.lastSeen = 0;
+      }
+    }
+  });
+
+  renderAlerts();
+  renderTable();
+  renderMap();
+  renderMetrics();
+}
+
+renderMetrics();
+initMap();
+renderAlerts();
+renderTable();
+updateDemoBadge();
+tick();
+setInterval(tick, 1000);
+setInterval(simulate, 4000);
+</script>
+</body>
+</html>
